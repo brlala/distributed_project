@@ -8,10 +8,19 @@ public class LeaderElection implements Watcher{
     private static final String ZOOKEEPER_ADDRESS = "localhost:2181";
     private static final int SESSION_TIMEOUT = 3000;
     private ZooKeeper zooKeeper;
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         LeaderElection leaderElection = new LeaderElection();
         leaderElection.connectToZookeeper();
+        leaderElection.run();
     }
+
+    public void run() throws InterruptedException {
+        // put main thread into a wait state, because connection is on another thread
+        synchronized (zooKeeper){
+            zooKeeper.wait();
+        }
+    }
+
     public void connectToZookeeper() throws IOException {
         this.zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, this);
     }
