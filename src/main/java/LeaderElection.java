@@ -12,6 +12,8 @@ public class LeaderElection implements Watcher{
         LeaderElection leaderElection = new LeaderElection();
         leaderElection.connectToZookeeper();
         leaderElection.run();
+        leaderElection.close();
+        System.out.println("Disconnected from Zookeeper, exiting application");
     }
 
     public void run() throws InterruptedException {
@@ -25,13 +27,22 @@ public class LeaderElection implements Watcher{
         this.zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, this);
     }
 
+    public void close() throws InterruptedException {
+        zooKeeper.close();
+    }
     @Override
     public void process(WatchedEvent event) {
-//        will be called by zookeper on a seperate thread whenever there is a new event coming from zookeeper server
+//        will be called by zookeeper on a separate thread whenever there is a new event coming from zookeeper server
         switch (event.getType()) {
             case None:
                 if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
                     System.out.println("Successfully connected to Zookeeper");
+                } else {
+                    //lose connection to zookeeper, we want to wake up main thread and allow application to close resources and exit
+                    synchronized (zooKeeper) {
+                        System.out.println("Disconnected from Zookeeper event");
+                        zooKeeper.notifyAll();
+                    }
                 }
         }
     }
