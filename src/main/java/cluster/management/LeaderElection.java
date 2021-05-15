@@ -8,12 +8,14 @@ import java.util.Collections;
 import java.util.List;
 
 public class LeaderElection implements Watcher {
-    private final ZooKeeper zooKeeper;
     private static final String ELECTION_NAMESPACE = "/election";
     private String currentZnodeName;
+    private final ZooKeeper zooKeeper;
+    private final OnElectionCallback onElectionCallback;
 
-    public LeaderElection(ZooKeeper zooKeeper) {
+    public LeaderElection(ZooKeeper zooKeeper, OnElectionCallback onElectionCallback) {
         this.zooKeeper = zooKeeper;
+        this.onElectionCallback = onElectionCallback;
     }
 
     public void volunteerForLeadership() throws InterruptedException, KeeperException {
@@ -37,6 +39,7 @@ public class LeaderElection implements Watcher {
             String smallestChild = children.get(0);
             if (smallestChild.equals(currentZnodeName)) {
                 System.out.println("I am the leader");
+                onElectionCallback.onElectedToBeLeader();
                 return;
             } else {
                 System.out.println("I am not the leader, " + smallestChild + " is the leader");
@@ -44,6 +47,7 @@ public class LeaderElection implements Watcher {
                 predecessorZnodeName = children.get(predecessorIndex);
                 predecessorStat = zooKeeper.exists(ELECTION_NAMESPACE + '/' + predecessorZnodeName, this);
             }
+            onElectionCallback.onWorker();
             System.out.println("Watching znode " + predecessorZnodeName);
             System.out.println();
         }
